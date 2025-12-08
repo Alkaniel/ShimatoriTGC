@@ -104,6 +104,10 @@ class OptionsMenu:
         self.selected_option = 0
         self.is_adjusting = False
         
+        # Message de confirmation
+        self.save_message = ""
+        self.save_message_timer = 0
+        
         # Polices
         try:
             self.title_font = pygame.font.SysFont('cinzel, trajan, georgia', 70, bold=True)
@@ -151,11 +155,20 @@ class OptionsMenu:
     def save_settings(self):
         """Sauvegarde les paramètres dans le fichier config"""
         try:
-            os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+            # S'assurer que le dossier parent existe
+            config_dir = os.path.dirname(self.config_file)
+            if config_dir and not os.path.exists(config_dir):
+                os.makedirs(config_dir, exist_ok=True)
+            
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=4, ensure_ascii=False)
+            
+            print(f"Paramètres sauvegardés dans : {self.config_file}")
+            return True
         except Exception as e:
             print(f"Erreur lors de la sauvegarde des paramètres: {e}")
+            print(f"Chemin du fichier: {self.config_file}")
+            return False
     
     def draw_background(self):
         """Dessine le fond style papier washi"""
@@ -340,6 +353,20 @@ class OptionsMenu:
         """Dessine les boutons Sauvegarder et Retour"""
         button_y = self.height - 80
         
+        # Message de confirmation si présent
+        if self.save_message and self.save_message_timer > 0:
+            msg_surf = self.button_font.render(self.save_message, True, self.vermillion)
+            msg_rect = msg_surf.get_rect(center=(self.width // 2, button_y - 60))
+            
+            # Fond pour le message
+            padding = 15
+            bg_rect = pygame.Rect(msg_rect.x - padding, msg_rect.y - padding//2,
+                                 msg_rect.width + padding*2, msg_rect.height + padding)
+            pygame.draw.rect(self.screen, (*self.washi_color, 240), bg_rect, border_radius=5)
+            pygame.draw.rect(self.screen, self.vermillion, bg_rect, 2, border_radius=5)
+            
+            self.screen.blit(msg_surf, msg_rect)
+        
         # Bouton Sauvegarder
         save_text = "Sauvegarder"
         save_surf = self.button_font.render(save_text, True, self.sumi_black)
@@ -427,8 +454,13 @@ class OptionsMenu:
                 if event.button == 1:  # Clic gauche
                     # Vérifier les boutons de contrôle
                     if hasattr(self, 'save_button_rect') and self.save_button_rect.collidepoint(event.pos):
-                        self.save_settings()
-                        return "saved"
+                        if self.save_settings():
+                            self.save_message = "✓ Paramètres sauvegardés!"
+                            self.save_message_timer = 120  # ~2 secondes à 60 FPS
+                        else:
+                            self.save_message = "✗ Erreur de sauvegarde"
+                            self.save_message_timer = 120
+                        return "back"  # Retour au menu principal après sauvegarde
                     elif hasattr(self, 'back_button_rect') and self.back_button_rect.collidepoint(event.pos):
                         self.save_settings()
                         return "back"
@@ -480,15 +512,16 @@ class OptionsMenu:
         while self.running:
             self.time += 0.016
             
+            # Décrémenter le timer du message de sauvegarde
+            if self.save_message_timer > 0:
+                self.save_message_timer -= 1
+            
             action = self.handle_events()
             
             if action == "quit":
                 return "quit"
             elif action == "back":
                 return "back"
-            elif action == "saved":
-                # Afficher un message de confirmation temporaire
-                pass
             
             # Rendu
             self.draw_background()
