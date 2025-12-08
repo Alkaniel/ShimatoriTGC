@@ -1,0 +1,14 @@
+{
+    "music_volume": 70,
+    "sfx_volume": 80,
+    "fullscreen": true,
+    "resolution": "1920x1080",
+    "graphics_quality": "Élevée",
+    "particles": true,
+    "animations": true,
+    "vibration": true,
+    "language": "Français",
+    "fps_limit": "120",
+    "vsync": true,
+    "tutorial_tips": true
+}
