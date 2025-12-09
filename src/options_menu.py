@@ -212,9 +212,9 @@ class OptionsMenu:
         option_rect = pygame.Rect(center_x - 350, y_pos - 27, 700, 55)
         option["rect"] = option_rect
         
-        # Détection du survol de la souris
+        # Détection du survol de la souris (instantanée)
         is_hovered = option_rect.collidepoint(mouse_pos)
-        if is_hovered and not is_selected:
+        if is_hovered:
             self.selected_option = index
             is_selected = True
         

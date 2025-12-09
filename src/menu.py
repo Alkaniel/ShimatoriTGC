@@ -4,6 +4,7 @@ import math
 import random
 import os
 from options_menu import OptionsMenu
+from collection_menu import CollectionMenu
 
 
 class Menu:
@@ -323,9 +324,9 @@ class Menu:
                                      button_width, button_height)
             button["rect"] = button_rect
             
-            # Vérifier si la souris survole ce bouton
+            # Vérifier si la souris survole ce bouton (détection instantanée)
             is_hovered = button_rect.collidepoint(mouse_pos)
-            if is_hovered and not is_selected:
+            if is_hovered:
                 self.selected_button = i
                 is_selected = True
             
@@ -584,8 +585,11 @@ def main():
             print("Lancement d'une nouvelle partie...")
             # TODO: Implémenter le gameplay
         elif result == "collection":
-            print("Ouverture de la collection...")
-            # TODO: Implémenter la collection
+            # Lancer le menu collection
+            collection_menu = CollectionMenu(screen)
+            collection_result = collection_menu.run()
+            if collection_result == "quit":
+                break
     
     # Quitter proprement
     pygame.quit()
