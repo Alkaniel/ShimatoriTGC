@@ -1,14 +1,15 @@
 {
     "music_volume": 70,
     "sfx_volume": 80,
-    "fullscreen": false,
+    "fullscreen": true,
     "resolution": "1920x1080",
-    "graphics_quality": "Élevée",
+    "language": "English",
+    "vsync": true,
+    "display_mode": "Sans Bordures",
+    "graphics_quality": "\u00c9lev\u00e9e",
     "particles": true,
     "animations": true,
     "vibration": false,
-    "language": "Français",
     "fps_limit": "120",
-    "vsync": true,
     "tutorial_tips": true
 }
