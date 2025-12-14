@@ -2,11 +2,13 @@ import pygame
 import math
 import constants.colors as colors
 from utils.game_state import GameState
+from models.card_types import UnitCard # Nécessaire pour vérifier le type de carte
 
 class CollectionMenu(GameState):
     def __init__(self, game_manager):
         super().__init__(game_manager)
         
+        # Récupération des objets cartes (UnitCard/SpellCard)
         self.cards = self.game.card_manager.get_all_cards()
         
         # --- Paramètres Visuels ---
@@ -15,29 +17,30 @@ class CollectionMenu(GameState):
         self.spacing = 25
         
         # --- Polices Spécifiques ---
+        # On définit des polices précises pour que tout rentre bien
         try:
             self.font_card_name = pygame.font.SysFont('cinzel, trajan, georgia', 22, bold=True)
-            self.font_card_class = pygame.font.SysFont('cinzel, trajan, georgia', 18, bold=False)
-            self.font_card_stat = pygame.font.SysFont('arial, sans-serif', 18, bold=True) # Réduit à 18 pour rentrer dans les bulles
+            self.font_card_class = pygame.font.SysFont('cinzel, trajan, georgia', 16, bold=False)
+            self.font_card_stat = pygame.font.SysFont('arial, sans-serif', 18, bold=True)
             self.font_card_label = pygame.font.SysFont('arial, sans-serif', 10, bold=True)
             
-            # Police spécifique pour le TITRE de la vue détail (plus petit que le main menu)
-            self.font_detail_title = pygame.font.SysFont('cinzel, trajan, georgia', 60, bold=True)
+            # Titre de la vue détail (Plus petit que le menu principal pour ne pas écraser)
+            self.font_detail_title = pygame.font.SysFont('cinzel, trajan, georgia', 50, bold=True)
         except:
             self.font_card_name = pygame.font.Font(None, 24)
-            self.font_card_class = pygame.font.Font(None, 20)
+            self.font_card_class = pygame.font.Font(None, 18)
             self.font_card_stat = pygame.font.Font(None, 20)
             self.font_card_label = pygame.font.Font(None, 12)
-            self.font_detail_title = pygame.font.Font(None, 60)
+            self.font_detail_title = pygame.font.Font(None, 50)
         
-        # Scroll & Nav
+        # Navigation
         self.scroll_y = 0
         self.target_scroll_y = 0
         self.max_scroll = 0
         self.selected_index = 0
         self.detail_view = False
         
-        # Layout
+        # Layout (Calculé au resize)
         self.cols = 4
         self.start_x = 0
         self.start_y = 120
@@ -46,11 +49,13 @@ class CollectionMenu(GameState):
 
     def on_resize(self, width, height):
         super().on_resize(width, height)
+        # Calcul responsive des colonnes
         available_width = width - 100
         self.cols = max(1, available_width // (self.card_width + self.spacing))
         grid_width = self.cols * self.card_width + (self.cols - 1) * self.spacing
         self.start_x = (width - grid_width) // 2
         
+        # Calcul du scroll max
         if self.cards:
             rows = math.ceil(len(self.cards) / self.cols)
             total_content_height = rows * (self.card_height + self.spacing)
@@ -125,7 +130,7 @@ class CollectionMenu(GameState):
     def draw(self):
         super().draw()
         
-        # Titre Principal
+        # Titre Collection
         title_font = pygame.font.SysFont('cinzel, trajan, georgia', 70, bold=True)
         title = title_font.render("COLLECTION", True, colors.SUMI_BLACK)
         self.screen.blit(title, title.get_rect(center=(self.width // 2, 60)))
@@ -134,6 +139,7 @@ class CollectionMenu(GameState):
         count = self.fonts['small'].render(count_text, True, colors.SUMI_GRAY)
         self.screen.blit(count, count.get_rect(center=(self.width // 2, 100)))
 
+        # Grille avec Clipping
         clip_rect = pygame.Rect(0, self.start_y, self.width, self.height - self.start_y)
         self.screen.set_clip(clip_rect)
         
@@ -152,16 +158,18 @@ class CollectionMenu(GameState):
             self.draw_detail_view()
 
     def draw_stat_bubble(self, x, y, value, color, label=""):
-        """Dessine une bulle de stat"""
-        radius = 16 # Légèrement plus petit
+        """Dessine une bulle de stat ronde et propre"""
+        radius = 16
         
         pygame.draw.circle(self.screen, color, (x, y), radius)
         pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x, y), radius, 1)
         
+        # Valeur en Blanc
         val_surf = self.font_card_stat.render(str(value), True, colors.WASHI_COLOR)
         val_rect = val_surf.get_rect(center=(x, y))
         self.screen.blit(val_surf, val_rect)
         
+        # Label sous la bulle
         if label:
             lbl_surf = self.font_card_label.render(label, True, color)
             self.screen.blit(lbl_surf, lbl_surf.get_rect(center=(x, y + radius + 8)))
@@ -175,6 +183,7 @@ class CollectionMenu(GameState):
         y = self.start_y + row * (self.card_height + self.spacing) - self.scroll_y
         rect = pygame.Rect(x, y, self.card_width, self.card_height)
         
+        # Fond et Bordure
         pygame.draw.rect(self.screen, colors.WASHI_COLOR, rect)
         
         is_selected = (index == self.selected_index)
@@ -188,25 +197,32 @@ class CollectionMenu(GameState):
         
         center_x = x + self.card_width // 2
         
-        name = self.font_card_name.render(card.get("nom", "Inconnu"), True, colors.SUMI_BLACK)
+        # 1. Nom
+        name = self.font_card_name.render(card.name, True, colors.SUMI_BLACK)
         if name.get_width() > self.card_width - 14:
             name = pygame.transform.smoothscale(name, (self.card_width - 14, int(name.get_height() * (self.card_width-14)/name.get_width())))
         self.screen.blit(name, name.get_rect(center=(center_x, y + 25)))
         
-        classe = self.font_card_class.render(card.get("classe", ""), True, colors.INDIGO)
+        # 2. Classe (Faction)
+        # On utilise card.faction.value pour avoir le texte propre ("Clan Akaryū")
+        classe = self.font_card_class.render(card.faction.value, True, colors.INDIGO)
         if classe.get_width() > self.card_width - 14:
             classe = pygame.transform.scale(classe, (self.card_width - 14, classe.get_height()))
         self.screen.blit(classe, classe.get_rect(center=(center_x, y + 50)))
         
+        # 3. Image Placeholder
         img_rect = pygame.Rect(x + 10, y + 65, self.card_width - 20, 120)
         pygame.draw.rect(self.screen, (*colors.INDIGO, 50), img_rect)
         pygame.draw.rect(self.screen, colors.SUMI_GRAY, img_rect, 1)
         
-        stats_y = y + 225
-        self.draw_stat_bubble(x + 35, stats_y, card.get('puissance', 0), colors.VERMILLION, "ATK")
-        self.draw_stat_bubble(x + self.card_width - 35, stats_y, card.get('vitalite', 0), colors.BAMBOO_GREEN, "PV")
+        # 4. Stats (Seulement pour les UnitCard)
+        if isinstance(card, UnitCard):
+            stats_y = y + 225
+            self.draw_stat_bubble(x + 35, stats_y, card.base_attack, colors.VERMILLION, "ATK")
+            self.draw_stat_bubble(x + self.card_width - 35, stats_y, card.base_health, colors.BAMBOO_GREEN, "PV")
         
-        rarete = card.get("rarete", 1)
+        # 5. Rareté
+        rarete = card.rarity.value
         star_start_x = center_x - (rarete * 12) // 2
         for i in range(rarete):
             pygame.draw.circle(self.screen, colors.GOLD_LEAF, (star_start_x + i * 12 + 6, y + self.card_height - 25), 4)
@@ -217,6 +233,8 @@ class CollectionMenu(GameState):
         self.screen.blit(overlay, (0, 0))
         
         card = self.cards[self.selected_index]
+        
+        # Dimensionnement Responsive
         w, h = 900, 600
         if w > self.width - 40: w = self.width - 40
         if h > self.height - 40: h = self.height - 40
@@ -228,68 +246,59 @@ class CollectionMenu(GameState):
         
         col_left_x = x + 30
         
-        # --- CORRECTION DU CHEVAUCHEMENT ---
-        
-        # 1. Nom : On utilise la police spécifique DETAIL (60px) au lieu du titre géant
-        # Position Y : y + 30
-        name = self.font_detail_title.render(card.get("nom", "???"), True, colors.SUMI_BLACK)
-        # Scale si trop grand
-        if name.get_width() > 400:
-             name = pygame.transform.smoothscale(name, (400, int(name.get_height() * 400/name.get_width())))
+        # Nom (Police de taille 50 au lieu de 90)
+        name = self.font_detail_title.render(card.name, True, colors.SUMI_BLACK)
+        # Réduction si le nom dépasse la moitié du panneau
+        if name.get_width() > w/2 - 20:
+             name = pygame.transform.smoothscale(name, (int(w/2 - 20), int(name.get_height() * (w/2-20)/name.get_width())))
         self.screen.blit(name, (col_left_x, y + 30))
         
-        # 2. Sous-titre : On le descend à y + 100 pour laisser respirer le titre
-        subtitle = f"{card.get('classe', 'Inconnu')} - {card.get('edition', 'Base')}"
+        # Sous-titre (Faction)
+        subtitle = f"{card.faction.value}"
         sub_surf = self.fonts['subtitle'].render(subtitle, True, colors.INDIGO)
-        self.screen.blit(sub_surf, (col_left_x, y + 100))
+        self.screen.blit(sub_surf, (col_left_x, y + 90)) # Remonté un peu
         
-        # 3. Image : On la descend aussi
-        img_y = y + 150
+        img_y = y + 140
         img_h = 250
         pygame.draw.rect(self.screen, (*colors.INDIGO, 30), (col_left_x, img_y, 300, img_h))
         pygame.draw.rect(self.screen, colors.SUMI_BLACK, (col_left_x, img_y, 300, img_h), 2)
         
-        # 4. Stats Détail
-        stats_y = img_y + img_h + 40
-        self.draw_stat_bubble(col_left_x + 60, stats_y, card.get('puissance', 0), colors.VERMILLION, "Attaque")
-        self.draw_stat_bubble(col_left_x + 180, stats_y, card.get('vitalite', 0), colors.BAMBOO_GREEN, "Santé")
+        # Stats Détail
+        if isinstance(card, UnitCard):
+            stats_y = img_y + img_h + 40
+            self.draw_stat_bubble(col_left_x + 60, stats_y, card.base_attack, colors.VERMILLION, "Attaque")
+            self.draw_stat_bubble(col_left_x + 180, stats_y, card.base_health, colors.BAMBOO_GREEN, "Santé")
         
         # --- COLONNE DROITE ---
         col_right_x = x + 360
         text_w = w - 390
-        # On aligne le texte avec le haut de l'image
         curr_y = img_y
         
+        # Description
         self.draw_text_wrapped("Description:", self.fonts['subtitle'], colors.SUMI_BLACK, col_right_x, curr_y, text_w)
         curr_y += 40
-        curr_y = self.draw_text_wrapped(f"\"{card.get('description', '')}\"", self.fonts['small'], colors.SUMI_GRAY, col_right_x, curr_y, text_w)
+        curr_y = self.draw_text_wrapped(f"\"{card.description}\"", self.fonts['small'], colors.SUMI_GRAY, col_right_x, curr_y, text_w)
         curr_y += 30
         
-        comps = card.get('competences', [])
-        if comps:
+        # Mots-clés (Keywords)
+        if isinstance(card, UnitCard) and card.keywords:
             self.draw_text_wrapped("Compétences:", self.fonts['subtitle'], colors.SUMI_BLACK, col_right_x, curr_y, text_w)
             curr_y += 35
-            for comp in comps:
-                curr_y = self.draw_text_wrapped(f"• {comp}", self.fonts['small'], colors.INDIGO, col_right_x, curr_y, text_w)
+            for kw in card.keywords:
+                # kw.value donne le texte propre "Provocation" au lieu de "TAUNT"
+                curr_y = self.draw_text_wrapped(f"• {kw.value}", self.fonts['small'], colors.INDIGO, col_right_x, curr_y, text_w)
             curr_y += 20
-            
-        forces = card.get('forces', [])
-        if forces:
-            txt = "Fort contre: " + ", ".join(forces)
-            curr_y = self.draw_text_wrapped(txt, self.fonts['small'], colors.BAMBOO_GREEN, col_right_x, curr_y, text_w)
-            
-        faiblesses = card.get('faiblesses', [])
-        if faiblesses:
-            txt = "Faible contre: " + ", ".join(faiblesses)
-            curr_y = self.draw_text_wrapped(txt, self.fonts['small'], colors.VERMILLION, col_right_x, curr_y, text_w)
-
+        
+        # Aide (Bas Droite)
         hint = self.fonts['small'].render("[ECHAP] Retour", True, colors.SUMI_GRAY)
         self.screen.blit(hint, hint.get_rect(bottomright=(x + w - 20, y + h - 20)))
 
     def draw_text_wrapped(self, text, font, color, x, y, max_width):
+        """Helper pour le retour à la ligne automatique"""
         words = text.split(' ')
         lines = []
         current_line = []
+        
         for word in words:
             current_line.append(word)
             w, _ = font.size(' '.join(current_line))
@@ -297,10 +306,12 @@ class CollectionMenu(GameState):
                 current_line.pop()
                 lines.append(' '.join(current_line))
                 current_line = [word]
+        
         lines.append(' '.join(current_line))
         
         line_height = font.get_linesize()
         for i, line in enumerate(lines):
             surf = font.render(line, True, color)
             self.screen.blit(surf, (x, y + i * line_height))
+            
         return y + len(lines) * line_height

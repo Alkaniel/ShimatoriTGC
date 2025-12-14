@@ -5,6 +5,7 @@ import json
 from menus.main_menu import MainMenu
 from menus.options_menu import OptionsMenu
 from menus.collection_menu import CollectionMenu
+from menus.game_scene import GameScene
 from utils.card_manager import CardManager
 
 class Game:
@@ -57,7 +58,8 @@ class Game:
         self.states = {
             "menu": MainMenu(self),
             "options": OptionsMenu(self),
-            "collection": CollectionMenu(self)
+            "collection": CollectionMenu(self),
+            "game": GameScene(self)
         }
 
         self.current_state = self.states["menu"]

@@ -3,257 +3,212 @@
     {
       "id": "card_001",
       "nom": "Jin Sakai",
-      "description": "Le Fantôme de Tsushima, guerrier légendaire qui défie les traditions pour sauver son peuple.",
+      "description": "Le Fantôme. Inflige des dégâts critiques.",
       "classe": "Ronin",
-      "puissance": 7,
-      "vitalite": 95,
-      "competences": [
-        "Lame Fantôme",
-        "Arts de la Duperie"
-      ],
-      "faiblesses": ["Noble", "Chef de clan"],
-      "forces": ["Bandit", "Mongole"],
+      "cout": 8,
+      "puissance": 8,
+      "vitalite": 8,
+      "competences": ["Lame Fantôme", "Arts de la Duperie"],
+      "faiblesses": ["Noble"],
+      "forces": ["Mongol"],
       "rarete": 5,
-      "image": "jin_sakai.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_002",
       "nom": "Shimura",
-      "description": "Seigneur de Tsushima, gardien des traditions samouraï et de l'honneur.",
+      "description": "Seigneur de Tsushima. Inspire les autres.",
       "classe": "Noble",
+      "cout": 7,
       "puissance": 6,
-      "vitalite": 85,
-      "competences": [
-        "Honneur Inébranlable",
-        "Commandement"
-      ],
-      "faiblesses": ["Ronin", "Hors la loi"],
-      "forces": ["Soldat", "Chef de clan"],
+      "vitalite": 7,
+      "competences": ["Honneur Inébranlable"],
+      "faiblesses": ["Hors la loi"],
+      "forces": ["Soldat"],
       "rarete": 4,
-      "image": "shimura.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_003",
       "nom": "Yuna",
-      "description": "Voleuse au grand cœur, experte en infiltration et survie.",
+      "description": "Voleuse experte en infiltration.",
       "classe": "Hors la loi",
-      "puissance": 4,
-      "vitalite": 65,
-      "competences": [
-        "Connaissance des Rues",
-        "Discrétion"
-      ],
-      "faiblesses": ["Soldat", "Noble"],
-      "forces": ["Paysan", "Bandit"],
+      "cout": 4,
+      "puissance": 5,
+      "vitalite": 4,
+      "competences": ["Discrétion"],
+      "faiblesses": ["Soldat"],
+      "forces": ["Paysan"],
       "rarete": 3,
-      "image": "yuna.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_004",
       "nom": "Khotun Khan",
-      "description": "Conquérant mongol impitoyable, stratège militaire redoutable.",
+      "description": "Une forteresse vivante.",
       "classe": "Khan",
+      "cout": 9,
       "puissance": 7,
-      "vitalite": 100,
-      "competences": [
-        "Tactiques Mongoles",
-        "Terreur"
-      ],
+      "vitalite": 10,
+      "competences": ["Terreur"],
       "faiblesses": ["Ronin"],
-      "forces": ["Soldat", "Chef de clan", "Noble"],
+      "forces": ["Noble"],
       "rarete": 5,
-      "image": "khotun_khan.png",
-      "edition": "Invasion Mongole"
+      "edition": "Invasion"
     },
     {
       "id": "card_005",
       "nom": "Masako Adachi",
-      "description": "Guerrière assoiffée de vengeance, dernière de son clan.",
+      "description": "Guerrière vengeresse.",
       "classe": "Descendant de clan",
-      "puissance": 5,
-      "vitalite": 75,
-      "competences": [
-        "Vengeance",
-        "Maîtrise de l'Arc"
-      ],
-      "faiblesses": ["Khan", "Général Mongol"],
-      "forces": ["Bandit", "Hors la loi"],
+      "cout": 5,
+      "puissance": 6,
+      "vitalite": 5,
+      "competences": ["Vengeance"],
+      "faiblesses": ["Khan"],
+      "forces": ["Bandit"],
       "rarete": 4,
-      "image": "masako.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_006",
       "nom": "Sensei Ishikawa",
-      "description": "Maître archer, mentor aux principes stricts.",
+      "description": "Maître archer.",
       "classe": "Ronin",
-      "puissance": 5,
-      "vitalite": 70,
-      "competences": [
-        "Tir Précis",
-        "Sagesse"
-      ],
+      "cout": 4,
+      "puissance": 4,
+      "vitalite": 5,
+      "competences": ["Tir Précis"],
       "faiblesses": ["Général Mongol"],
-      "forces": ["Soldat", "Bandit"],
+      "forces": ["Soldat"],
       "rarete": 3,
-      "image": "ishikawa.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_007",
       "nom": "Norio",
-      "description": "Moine guerrier bouddhiste, protecteur des innocents.",
+      "description": "Moine guerrier robuste.",
       "classe": "Religieux",
-      "puissance": 4,
-      "vitalite": 80,
-      "competences": [
-        "Bénédiction",
-        "Volonté de Fer"
-      ],
-      "faiblesses": ["Mongole", "Khan"],
-      "forces": ["Paysan", "Descendant de clan"],
+      "cout": 3,
+      "puissance": 2,
+      "vitalite": 6,
+      "competences": ["Volonté de Fer"],
+      "faiblesses": ["Mongol"],
+      "forces": ["Paysan"],
       "rarete": 3,
-      "image": "norio.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_008",
       "nom": "Général Temuge",
-      "description": "Officier mongol cruel et efficace au combat.",
+      "description": "Officier mongol brutal.",
       "classe": "Général Mongol",
+      "cout": 6,
       "puissance": 6,
-      "vitalite": 90,
-      "competences": [
-        "Charge Mongole",
-        "Intimidation"
-      ],
-      "faiblesses": ["Ronin", "Chef de clan"],
-      "forces": ["Paysan", "Soldat"],
+      "vitalite": 7,
+      "competences": ["Intimidation"],
+      "faiblesses": ["Ronin"],
+      "forces": ["Soldat"],
       "rarete": 4,
-      "image": "temuge.png",
-      "edition": "Invasion Mongole"
+      "edition": "Invasion"
     },
     {
       "id": "card_009",
       "nom": "Kenji",
-      "description": "Marchand rusé et contrebandier, expert en négociation.",
+      "description": "Marchand. Faible mais utile.",
       "classe": "Paysan",
-      "puissance": 2,
-      "vitalite": 50,
-      "competences": [
-        "Commerce",
-        "Persuasion"
-      ],
-      "faiblesses": ["Bandit", "Mongole"],
+      "cout": 1,
+      "puissance": 1,
+      "vitalite": 2,
+      "competences": ["Commerce"],
+      "faiblesses": ["Bandit"],
       "forces": ["Noble"],
       "rarete": 2,
-      "image": "kenji.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_010",
       "nom": "Ryuzo",
-      "description": "Chef des Paille d'Or, ancien ami devenu ennemi.",
+      "description": "Chef des Paille d'Or.",
       "classe": "Bandit",
+      "cout": 5,
       "puissance": 5,
-      "vitalite": 70,
-      "competences": [
-        "Embuscade",
-        "Trahison"
-      ],
-      "faiblesses": ["Soldat", "Chef de clan"],
-      "forces": ["Paysan", "Hors la loi"],
+      "vitalite": 5,
+      "competences": ["Trahison"],
+      "faiblesses": ["Soldat"],
+      "forces": ["Paysan"],
       "rarete": 3,
-      "image": "ryuzo.png",
-      "edition": "Légendes de Tsushima"
+      "edition": "Légendes"
     },
     {
       "id": "card_011",
       "nom": "Capitaine Mongol",
-      "description": "Officier de l'armée d'invasion, combattant expérimenté.",
+      "description": "Soldat solide.",
       "classe": "Officier Mongol",
-      "puissance": 5,
-      "vitalite": 75,
-      "competences": [
-        "Formation de Combat",
-        "Résistance"
-      ],
-      "faiblesses": ["Khan", "Noble"],
-      "forces": ["Paysan", "Religieux"],
+      "cout": 4,
+      "puissance": 4,
+      "vitalite": 5,
+      "competences": ["Résistance"],
+      "faiblesses": ["Khan"],
+      "forces": ["Paysan"],
       "rarete": 3,
-      "image": "capitaine_mongol.png",
-      "edition": "Invasion Mongole"
+      "edition": "Invasion"
     },
     {
       "id": "card_012",
       "nom": "Samouraï d'Elite",
-      "description": "Guerrier d'élite au service de son seigneur.",
+      "description": "Guerrier discipliné.",
       "classe": "Soldat",
-      "puissance": 4,
-      "vitalite": 65,
-      "competences": [
-        "Discipline",
-        "Kata du Sabre"
-      ],
-      "faiblesses": ["Général Mongol", "Ronin"],
-      "forces": ["Bandit", "Hors la loi"],
+      "cout": 3,
+      "puissance": 3,
+      "vitalite": 4,
+      "competences": ["Discipline"],
+      "faiblesses": ["Général Mongol"],
+      "forces": ["Bandit"],
       "rarete": 2,
-      "image": "samurai_elite.png",
-      "edition": "Arsenal Japonais"
+      "edition": "Arsenal"
     },
     {
       "id": "card_013",
       "nom": "Prêtre Shintoïste",
-      "description": "Gardien des sanctuaires et des esprits ancestraux.",
+      "description": "Soutien spirituel.",
       "classe": "Religieux",
-      "puissance": 3,
-      "vitalite": 60,
-      "competences": [
-        "Purification",
-        "Protection Divine"
-      ],
-      "faiblesses": ["Mongole", "Hors la loi"],
-      "forces": ["Descendant de clan", "Noble"],
+      "cout": 2,
+      "puissance": 2,
+      "vitalite": 3,
+      "competences": ["Protection Divine"],
+      "faiblesses": ["Mongol"],
+      "forces": ["Noble"],
       "rarete": 2,
-      "image": "pretre_shinto.png",
-      "edition": "Arsenal Japonais"
+      "edition": "Arsenal"
     },
     {
       "id": "card_014",
       "nom": "Daimyo Harunobu",
-      "description": "Seigneur de guerre charismatique et stratège politique.",
+      "description": "Stratège politique.",
       "classe": "Chef de clan",
-      "puissance": 6,
-      "vitalite": 80,
-      "competences": [
-        "Autorité",
-        "Stratégie de Guerre"
-      ],
-      "faiblesses": ["Ronin", "Bandit"],
-      "forces": ["Soldat", "Descendant de clan"],
+      "cout": 5,
+      "puissance": 4,
+      "vitalite": 6,
+      "competences": ["Stratégie"],
+      "faiblesses": ["Ronin"],
+      "forces": ["Soldat"],
       "rarete": 4,
-      "image": "daimyo.png",
-      "edition": "Arsenal Japonais"
+      "edition": "Arsenal"
     },
     {
       "id": "card_015",
       "nom": "Héritier du Clan",
-      "description": "Jeune guerrier prometteur, porteur des traditions ancestrales.",
+      "description": "Jeune guerrier.",
       "classe": "Descendant de clan",
-      "puissance": 4,
-      "vitalite": 60,
-      "competences": [
-        "Héritage",
-        "Potentiel"
-      ],
-      "faiblesses": ["Général Mongol", "Bandit"],
-      "forces": ["Paysan", "Religieux"],
+      "cout": 2,
+      "puissance": 3,
+      "vitalite": 2,
+      "competences": ["Potentiel"],
+      "faiblesses": ["Mongol"],
+      "forces": ["Paysan"],
       "rarete": 2,
-      "image": "heritier.png",
-      "edition": "Arsenal Japonais"
+      "edition": "Arsenal"
     }
   ]
 }

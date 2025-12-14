@@ -1,7 +1,7 @@
 {
     "music_volume": 70,
     "sfx_volume": 80,
-    "fullscreen": true,
+    "fullscreen": false,
     "resolution": "1920x1080",
     "language": "English",
     "vsync": true,

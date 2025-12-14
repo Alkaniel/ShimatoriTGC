@@ -20,14 +20,19 @@ class Rarity(Enum):
     RARE = 2
     EPIC = 3
     LEGENDARY = 4
+    MYTHICAL = 5
+
 
 class Keyword(Enum):
-    CHARGE = "Charge"
     TAUNT = "Provocation"
+    CHARGE = "Charge"
+    DIVINE_SHIELD = "Bouclier Divin"
     STEALTH = "Furtivité"
+    POISONOUS = "Toxique"
     LIFESTEAL = "Vol de vie"
+    HEAL="Soins"
+    FORGE = "Forge" 
+    SACRIFICE = "Sacrifice"
     BATTLECRY = "Cri de guerre"
-    DEATHRATTLE = "Dernier souffle"
-    RAGE = "Rage"
-    FREZZE = "Gel"
+    DEATHRATTLE = "Râle d'agonie"
     

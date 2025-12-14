@@ -1,10 +1,31 @@
 import json
 import os
+import sys
+
+# --- FIX DES CHEMINS (IMPORTANT) ---
+# 1. On récupère le dossier où se trouve ce fichier (src/utils)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 2. On récupère le dossier parent (src)
+src_dir = os.path.dirname(current_dir)
+# 3. On ajoute 'src' aux chemins de recherche de Python
+if src_dir not in sys.path:
+    sys.path.append(src_dir)
+
+# --- IMPORTS ---
+try:
+    # Maintenant Python trouve 'models' car il connait 'src'
+    from models.card_types import UnitCard, SpellCard
+except ImportError as e:
+    print(f"CRITICAL ERROR: Impossible d'importer les modèles. ({e})")
+    # On affiche les chemins connus pour aider au debug
+    print(f"Chemins Python: {sys.path}")
+    sys.exit(1)
 
 class CardManager:
     def __init__(self):
         self.cards = []
-        self.filepath = os.path.join(os.path.dirname(__file__), '..', "..", 'cards.json')
+        # Chemin vers cards.json (remonte de utils/ vers la racine du projet)
+        self.filepath = os.path.join(src_dir, '..', 'cards.json')
         self.load_cards()
 
     def load_cards(self):
@@ -16,40 +37,21 @@ class CardManager:
                     
                     self.cards = []
                     for item in raw_list:
+                        # Détection automatique du type
                         if "puissance" in item:
                             self.cards.append(UnitCard(item))
                         else:
                             self.cards.append(SpellCard(item))
                             
-                    print(f"Chargé {len(self.cards)} cartes (Objets).")
+                    print(f"Succès : {len(self.cards)} cartes chargées.")
             except Exception as e:
-                print(f"Erreur JSON : {e}")
+                print(f"Erreur lors du chargement JSON : {e}")
                 self.cards = []
         else:
+            print(f"Attention : Fichier introuvable à {self.filepath}")
+            # On cherche à comprendre où il cherche
+            print(f"Dossier actuel : {os.getcwd()}")
             self.cards = []
 
-    def _generate_test_cards(self):
-        """Génère des fausses cartes si le fichier manque (Fallback)"""
-        return [
-            {
-                "id": i,
-                "nom": f"Guerrier {i}", 
-                "puissance": i*10, 
-                "vitalite": i*5, 
-                "cout": i % 10,
-                "description": "Un guerrier puissant du clan Shimatori.", 
-                "rarete": (i%5)+1
-            } 
-            for i in range(1, 21)
-        ]
-
     def get_all_cards(self):
-        """Renvoie toutes les cartes"""
         return self.cards
-
-    def get_card_by_id(self, card_id):
-        """Utile pour le futur système de jeu"""
-        for card in self.cards:
-            if card.get("id") == card_id:
-                return card
-        return None
