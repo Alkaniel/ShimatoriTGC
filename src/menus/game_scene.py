@@ -3,31 +3,59 @@ import random
 import constants.colors as colors
 from utils.game_state import GameState
 from models.player import Player
-from models.card_types import UnitCard
+from models.card_types import UnitCard, SpellCard
 from constants.enums import Keyword
+
+# --- CLASSE POUR LES EFFETS FLOTTANTS ---
+class FloatingText:
+    def __init__(self, x, y, text, color, size=24):
+        self.x = x
+        self.y = y
+        self.text = text
+        self.color = color
+        self.timer = 60 # Durée de vie (1 seconde à 60 FPS)
+        self.opacity = 255
+        
+        try:
+            self.font = pygame.font.SysFont('arial, sans-serif', size, bold=True)
+        except:
+            self.font = pygame.font.Font(None, size)
+
+    def update(self):
+        self.y -= 1.5 # Monte doucement
+        self.timer -= 1
+        if self.timer < 20: # Fade out sur la fin
+            self.opacity -= 12
+            if self.opacity < 0: self.opacity = 0
+
+    def draw(self, screen):
+        surf = self.font.render(self.text, True, self.color)
+        surf.set_alpha(self.opacity)
+        # Contour noir pour lisibilité
+        outline = self.font.render(self.text, True, colors.SUMI_BLACK)
+        outline.set_alpha(self.opacity)
+        
+        rect = surf.get_rect(center=(self.x, self.y))
+        screen.blit(outline, (rect.x+2, rect.y+2))
+        screen.blit(surf, rect)
+
 
 class GameScene(GameState):
     def __init__(self, game_manager):
         super().__init__(game_manager)
         
         try:
-            # Polices standard
             self.font_mini_name = pygame.font.SysFont('cinzel, trajan, georgia', 12, bold=True)
             self.font_mini_stat = pygame.font.SysFont('arial, sans-serif', 16, bold=True)
             self.font_hero_hp = pygame.font.SysFont('arial, sans-serif', 30, bold=True)
             self.font_button = pygame.font.SysFont('cinzel, trajan, georgia', 20, bold=True)
             self.font_game_over = pygame.font.SysFont('cinzel, trajan, georgia', 80, bold=True)
-            
-            # Polices pour le Zoom
             self.font_zoom_name = pygame.font.SysFont('cinzel, trajan, georgia', 20, bold=True)
             self.font_zoom_desc = pygame.font.SysFont('arial, sans-serif', 15, bold=False)
             self.font_zoom_stat = pygame.font.SysFont('arial, sans-serif', 22, bold=True)
             self.font_zoom_kw = pygame.font.SysFont('arial, sans-serif', 15, bold=True)
-            
-            # Police pour le nombre de cartes dans le deck
             self.font_deck = pygame.font.SysFont('arial, sans-serif', 24, bold=True)
         except:
-            # Fallback
             self.font_mini_name = pygame.font.Font(None, 14)
             self.font_mini_stat = pygame.font.Font(None, 18)
             self.font_hero_hp = pygame.font.Font(None, 40)
@@ -46,6 +74,9 @@ class GameScene(GameState):
         self.card_visual_width = 120
         self.card_visual_height = 160
         self.end_turn_btn = pygame.Rect(0, 0, 140, 50)
+        
+        # LISTE DES EFFETS VISUELS
+        self.visual_effects = []
         
         self.reset_game()
         self.on_resize(self.width, self.height)
@@ -69,6 +100,7 @@ class GameScene(GameState):
         self.drag_offset_x = 0
         self.drag_offset_y = 0
         self.attacking_unit = None
+        self.visual_effects = []
 
     def on_resize(self, width, height):
         super().on_resize(width, height)
@@ -120,39 +152,73 @@ class GameScene(GameState):
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     if self.dragging_card:
-                        if mouse_pos[1] < self.hand_y - 50:
-                            self.player.play_unit(self.dragging_index)
+                        self.handle_card_drop(mouse_pos)
                         self.dragging_card = None
                         self.dragging_index = -1
                     elif self.attacking_unit:
                         self.handle_attack_release(mouse_pos)
                         self.attacking_unit = None
 
+    def handle_card_drop(self, mouse_pos):
+        card = self.dragging_card
+        
+        if isinstance(card, UnitCard):
+            if mouse_pos[1] < self.hand_y - 50:
+                self.player.play_unit(self.dragging_index)
+                
+        elif isinstance(card, SpellCard):
+            target = None
+            for enemy in self.opponent.board:
+                if enemy.rect and enemy.rect.collidepoint(mouse_pos): target = enemy; break
+            
+            if not target:
+                for ally in self.player.board:
+                    if ally.rect and ally.rect.collidepoint(mouse_pos): target = ally; break
+            
+            if not target and self.opponent_face_rect and self.opponent_face_rect.collidepoint(mouse_pos):
+                target = self.opponent
+            
+            if not target and self.player_face_rect and self.player_face_rect.collidepoint(mouse_pos):
+                target = self.player
+
+            if target:
+                if self.player.play_ritual(self.dragging_index, target):
+                    # Effet visuel si c'est un buff sur soi-même ou ses unités
+                    if card.effect_type == "buff_target" or target == self.player:
+                         self.spawn_floating_text(target.rect.centerx if hasattr(target, 'rect') else self.player_face_rect.centerx, 
+                                                  target.rect.centery if hasattr(target, 'rect') else self.player_face_rect.centery, 
+                                                  "Buff!", colors.BAMBOO_GREEN)
+                    # Effet visuel si c'est des dégâts
+                    elif card.effect_type == "damage_target":
+                         self.spawn_floating_text(target.rect.centerx if hasattr(target, 'rect') else self.opponent_face_rect.centerx, 
+                                                  target.rect.centery if hasattr(target, 'rect') else self.opponent_face_rect.centery, 
+                                                  f"-{card.effect_value}", colors.VERMILLION)
+
+                self.clean_dead_units(self.player)
+                self.clean_dead_units(self.opponent)
+                self.check_game_over()
+
     def handle_attack_release(self, mouse_pos):
         target = None
         for enemy in self.opponent.board:
-            if enemy.rect and enemy.rect.collidepoint(mouse_pos):
-                target = enemy
-                break
+            if enemy.rect and enemy.rect.collidepoint(mouse_pos): target = enemy; break
         
         if not target and self.opponent_face_rect and self.opponent_face_rect.collidepoint(mouse_pos):
             target = self.opponent
 
         if not target: return
 
-        # Gestion STEALTH
         if isinstance(target, UnitCard) and Keyword.STEALTH in target.keywords:
-            print("Impossible d'attaquer une unité furtive !")
+            self.spawn_floating_text(target.rect.centerx, target.rect.centery, "Furtif!", colors.SUMI_GRAY)
             return
 
-        # Gestion TAUNT
         taunt_units = [u for u in self.opponent.board if Keyword.TAUNT in u.keywords and not u.is_dead and Keyword.STEALTH not in u.keywords]
         
         if taunt_units:
             if target in taunt_units:
                 self.resolve_combat(self.attacking_unit, target)
             else:
-                print("ACTION BLOQUÉE : Vous devez attaquer l'unité avec Provocation !")
+                self.spawn_floating_text(mouse_pos[0], mouse_pos[1], "Provocation!", colors.VERMILLION)
         else:
             self.resolve_combat(self.attacking_unit, target)
 
@@ -163,39 +229,47 @@ class GameScene(GameState):
         if isinstance(target, UnitCard):
             damage_to_attacker = target.current_attack
             
-            # Toxique
             if Keyword.POISONOUS in attacker.keywords: damage_to_target = 999 
             if Keyword.POISONOUS in target.keywords: damage_to_attacker = 999
 
-            # Bouclier Divin Target
             if Keyword.DIVINE_SHIELD in target.keywords:
                 damage_to_target = 0
                 target.keywords.remove(Keyword.DIVINE_SHIELD)
-                print(f"Bouclier Divin de {target.name} brisé !")
+                self.spawn_floating_text(target.rect.centerx, target.rect.centery, "Bloqué!", (255, 215, 0))
             
             target.take_damage(damage_to_target)
+            if damage_to_target > 0:
+                self.spawn_floating_text(target.rect.centerx, target.rect.centery, f"-{damage_to_target}", colors.VERMILLION)
             
-            # Bouclier Divin Attacker
             if Keyword.DIVINE_SHIELD in attacker.keywords:
                 damage_to_attacker = 0
                 attacker.keywords.remove(Keyword.DIVINE_SHIELD)
-                print(f"Bouclier Divin de {attacker.name} brisé !")
+                self.spawn_floating_text(attacker.rect.centerx, attacker.rect.centery, "Bloqué!", (255, 215, 0))
                 
             attacker.take_damage(damage_to_attacker)
+            if damage_to_attacker > 0:
+                self.spawn_floating_text(attacker.rect.centerx, attacker.rect.centery, f"-{damage_to_attacker}", colors.VERMILLION)
             
-            if Keyword.STEALTH in attacker.keywords:
-                attacker.keywords.remove(Keyword.STEALTH)
+            if Keyword.STEALTH in attacker.keywords: attacker.keywords.remove(Keyword.STEALTH)
 
         elif isinstance(target, Player):
             target.health -= damage_to_target
-            print(f"{target.name} prend {damage_to_target} dégâts")
-            if Keyword.STEALTH in attacker.keywords:
-                attacker.keywords.remove(Keyword.STEALTH)
+            # Position du texte pour le héros
+            tx = self.opponent_face_rect.centerx if target == self.opponent else self.player_face_rect.centerx
+            ty = self.opponent_face_rect.centery if target == self.opponent else self.player_face_rect.centery
+            self.spawn_floating_text(tx, ty, f"-{damage_to_target}", colors.VERMILLION)
+            
+            if Keyword.STEALTH in attacker.keywords: attacker.keywords.remove(Keyword.STEALTH)
             
         attacker.can_attack = False
         self.clean_dead_units(self.player)
         self.clean_dead_units(self.opponent)
-        
+        self.check_game_over()
+
+    def spawn_floating_text(self, x, y, text, color):
+        self.visual_effects.append(FloatingText(x, y, text, color))
+
+    def check_game_over(self):
         if self.opponent.health <= 0: self.trigger_game_over(True)
         elif self.player.health <= 0: self.trigger_game_over(False)
 
@@ -217,7 +291,13 @@ class GameScene(GameState):
             self.opponent.start_turn()
             
             for i in range(len(self.opponent.hand) - 1, -1, -1):
-                self.opponent.play_unit(i)
+                card = self.opponent.hand[i]
+                if isinstance(card, UnitCard):
+                    self.opponent.play_unit(i)
+                elif isinstance(card, SpellCard) and card.effect_type == "damage_target":
+                    self.opponent.play_ritual(i, self.player)
+                    cx, cy = self.player_face_rect.centerx, self.player_face_rect.centery
+                    self.spawn_floating_text(cx, cy, f"-{card.effect_value}", colors.VERMILLION)
                 
             taunt_targets = [u for u in self.player.board if Keyword.TAUNT in u.keywords]
             other_targets = [u for u in self.player.board if Keyword.TAUNT not in u.keywords and Keyword.STEALTH not in u.keywords]
@@ -228,8 +308,7 @@ class GameScene(GameState):
                     if taunt_targets: target = random.choice(taunt_targets)
                     elif other_targets:
                         target = self.player if random.random() < 0.5 else random.choice(other_targets)
-                    else: target = self.player
-                        
+                    else: target = self.player 
                     if target:
                         self.resolve_combat(unit, target)
                         taunt_targets = [u for u in self.player.board if Keyword.TAUNT in u.keywords]
@@ -239,17 +318,17 @@ class GameScene(GameState):
                 self.is_player_turn = True
                 self.player.start_turn()
 
-    def update(self): pass
+    def update(self):
+        for effect in self.visual_effects[:]:
+            effect.update()
+            if effect.timer <= 0:
+                self.visual_effects.remove(effect)
 
     def draw(self):
         self.screen.fill(colors.WASHI_COLOR)
-        
-        # --- L'ERREUR ÉTAIT ICI ---
-        self.draw_tatami_pattern() 
-        
+        self.draw_tatami_pattern()
         pygame.draw.line(self.screen, colors.SUMI_GRAY, (0, self.height//2), (self.width, self.height//2), 2)
         
-        # --- PIOCHES ---
         self.draw_deck_pile(self.opponent, 50, self.height//2 - 140)
         self.draw_deck_pile(self.player, self.width - 110, self.height//2 + 50)
         
@@ -264,53 +343,56 @@ class GameScene(GameState):
         self.draw_end_turn_button()
 
         if self.dragging_card:
-            mx, my = pygame.mouse.get_pos()
-            self.draw_card_front(self.dragging_card, mx - self.drag_offset_x, my - self.drag_offset_y)
+            if isinstance(self.dragging_card, UnitCard):
+                mx, my = pygame.mouse.get_pos()
+                self.draw_card_front(self.dragging_card, mx - self.drag_offset_x, my - self.drag_offset_y)
+            elif isinstance(self.dragging_card, SpellCard):
+                card_origin_x = self.dragging_card.rect.x
+                card_origin_y = self.dragging_card.rect.y
+                self.draw_card_front(self.dragging_card, card_origin_x, card_origin_y)
+                start_pos = self.dragging_card.rect.center
+                end_pos = pygame.mouse.get_pos()
+                pygame.draw.line(self.screen, colors.INDIGO, start_pos, end_pos, 4)
+                pygame.draw.circle(self.screen, colors.INDIGO, end_pos, 8)
+
         if self.attacking_unit:
             self.draw_attack_arrow()
+        
+        for effect in self.visual_effects:
+            effect.draw(self.screen)
+
         if self.game_over:
             self.draw_game_over_screen()
         
         if not self.dragging_card and not self.game_over:
             self.check_hover_and_draw_zoom()
 
-    # --- MÉTHODES DE DESSIN (Doivent toutes être dans la classe) ---
-
     def draw_tatami_pattern(self):
         color = (230, 225, 210)
-        line_spacing = 100
-        for x in range(0, self.width, line_spacing):
-            pygame.draw.line(self.screen, color, (x, 0), (x, self.height), 1)
-        for y in range(0, self.height, line_spacing):
-            pygame.draw.line(self.screen, color, (0, y), (self.width, y), 1)
+        for x in range(0, self.width, 100): pygame.draw.line(self.screen, color, (x, 0), (x, self.height), 1)
+        for y in range(0, self.height, 100): pygame.draw.line(self.screen, color, (0, y), (self.width, y), 1)
 
-    # --- C'EST LA MÉTHODE QUI MANQUAIT ---
     def draw_stat_bubble(self, x, y, value, color):
         pygame.draw.circle(self.screen, color, (x, y), 16)
         pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x, y), 16, 2)
         val_surf = self.font_mini_stat.render(str(value), True, colors.WASHI_COLOR)
-        val_rect = val_surf.get_rect(center=(x, y))
-        val_rect.y += 1 
+        val_rect = val_surf.get_rect(center=(x, y)); val_rect.y+=1
         self.screen.blit(val_surf, val_rect)
 
     def draw_deck_pile(self, player, x, y):
         deck_count = len(player.deck)
         if deck_count == 0:
-            rect = pygame.Rect(x, y, 60, 80)
-            pygame.draw.rect(self.screen, (0,0,0,50), rect, 1)
+            rect = pygame.Rect(x, y, 60, 80); pygame.draw.rect(self.screen, (0,0,0,50), rect, 1)
             return
-
         offset = min(deck_count, 3) * 2
         for i in range(min(deck_count, 3)):
             r = pygame.Rect(x - i*2, y - i*2, 60, 80)
             pygame.draw.rect(self.screen, colors.INDIGO, r)
             pygame.draw.rect(self.screen, colors.WASHI_COLOR, r, 1)
-        
         top_rect = pygame.Rect(x - offset, y - offset, 60, 80)
         pygame.draw.rect(self.screen, colors.INDIGO, top_rect)
         pygame.draw.rect(self.screen, colors.GOLD_LEAF, top_rect, 2)
         pygame.draw.circle(self.screen, colors.GOLD_LEAF, top_rect.center, 15, 1)
-        
         txt_surf = self.font_deck.render(str(deck_count), True, colors.WASHI_COLOR)
         txt_bg = txt_surf.get_rect(center=top_rect.center)
         pygame.draw.rect(self.screen, colors.INDIGO, txt_bg.inflate(10, 5))
@@ -318,10 +400,7 @@ class GameScene(GameState):
 
     def draw_keyword_icons(self, card, x, y):
         if not isinstance(card, UnitCard): return
-        icon_y = y + 85
-        start_x = x + 10
-        spacing = 20
-        
+        icon_y = y + 85; start_x = x + 10; spacing = 20
         if Keyword.CHARGE in card.keywords:
             cx, cy = start_x, icon_y
             pygame.draw.circle(self.screen, colors.GOLD_LEAF, (cx, cy), 8)
@@ -330,19 +409,17 @@ class GameScene(GameState):
             pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx+3, cy-3), (cx-3, cy+3), 2)
             pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx-3, cy+3), (cx+3, cy+3), 2)
             start_x += spacing
-
         if Keyword.STEALTH in card.keywords:
             cx, cy = start_x, icon_y
             pygame.draw.circle(self.screen, colors.SUMI_GRAY, (cx, cy), 8)
             pygame.draw.circle(self.screen, colors.SUMI_BLACK, (cx, cy), 8, 1)
             pygame.draw.line(self.screen, colors.WASHI_COLOR, (cx-4, cy), (cx+4, cy), 2)
             start_x += spacing
-
         if Keyword.POISONOUS in card.keywords:
             cx, cy = start_x, icon_y
             pygame.draw.circle(self.screen, (50, 200, 50), (cx, cy), 8)
             pygame.draw.circle(self.screen, colors.SUMI_BLACK, (cx, cy), 8, 1)
-            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx-3, cy-3), (cx+3, cy+3), 2)
+            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx-3, cy-3), (cx+3, cy-3), 2)
             pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx+3, cy-3), (cx-3, cy+3), 2)
             start_x += spacing
 
@@ -414,9 +491,7 @@ class GameScene(GameState):
         rect = pygame.Rect(x, y, self.card_visual_width, self.card_visual_height)
         card.rect = rect
         
-        has_taunt = False
-        is_stealth = False
-        
+        has_taunt = False; is_stealth = False
         if isinstance(card, UnitCard):
             if Keyword.TAUNT in card.keywords: has_taunt = True
             if Keyword.STEALTH in card.keywords: is_stealth = True

@@ -58,8 +58,11 @@ class UnitCard(Card):
             self.is_dead = True
 
 class SpellCard(Card):
-    """Un sort à effet immédiat"""
+    """Un Rituel à effet immédiat"""
     def __init__(self, data: dict):
         super().__init__(data)
         self.type = CardType.SPELL
-        self.effect_id = data.get("effect_id", "none")
+        
+        self.effect_type = data.get("effect_type", "none")
+
+        self.effect_value = data.get("effect_value", 0)

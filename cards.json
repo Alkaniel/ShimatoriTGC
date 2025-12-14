@@ -224,6 +224,42 @@
       "rarete": 2,
       "edition": "Arsenal",
       "image": "heritier.png"
+    },
+    {
+      "id": "rituel_001",
+      "nom": "Lancer de Kunai",
+      "description": "Rituel. Inflige 2 dégâts à une cible.",
+      "classe": "Neutre",
+      "cout": 1,
+      "image": "kunai.png",
+      "rarete": 1,
+      "effect_type": "damage_target",
+      "effect_value": 2,
+      "edition": "Arsenal"
+    },
+    {
+      "id": "rituel_002",
+      "nom": "Affûtage Katana",
+      "description": "Rituel. Donne +2 ATK à une unité.",
+      "classe": "Neutre",
+      "cout": 2,
+      "image": "sharpen.png",
+      "rarete": 2,
+      "effect_type": "buff_target",
+      "effect_value": 2,
+      "edition": "Arsenal"
+    },
+    {
+      "id": "rituel_003",
+      "nom": "Flèche Explosive",
+      "description": "Rituel. Inflige 4 dégâts à une cible.",
+      "classe": "Neutre",
+      "cout": 3,
+      "image": "explosive_arrow.png",
+      "rarete": 3,
+      "effect_type": "damage_target",
+      "effect_value": 4,
+      "edition": "Invasion"
     }
   ]
 }
