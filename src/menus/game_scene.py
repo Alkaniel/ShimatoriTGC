@@ -235,28 +235,35 @@ class GameScene(GameState):
             if Keyword.DIVINE_SHIELD in target.keywords:
                 damage_to_target = 0
                 target.keywords.remove(Keyword.DIVINE_SHIELD)
-                self.spawn_floating_text(target.rect.centerx, target.rect.centery, "Bloqué!", (255, 215, 0))
+                if target.rect: # VÉRIFICATION AJOUTÉE
+                    self.spawn_floating_text(target.rect.centerx, target.rect.centery, "Bloqué!", (255, 215, 0))
             
             target.take_damage(damage_to_target)
-            if damage_to_target > 0:
+            if damage_to_target > 0 and target.rect: # VÉRIFICATION AJOUTÉE
                 self.spawn_floating_text(target.rect.centerx, target.rect.centery, f"-{damage_to_target}", colors.VERMILLION)
             
             if Keyword.DIVINE_SHIELD in attacker.keywords:
                 damage_to_attacker = 0
                 attacker.keywords.remove(Keyword.DIVINE_SHIELD)
-                self.spawn_floating_text(attacker.rect.centerx, attacker.rect.centery, "Bloqué!", (255, 215, 0))
+                if attacker.rect: # VÉRIFICATION AJOUTÉE
+                    self.spawn_floating_text(attacker.rect.centerx, attacker.rect.centery, "Bloqué!", (255, 215, 0))
                 
             attacker.take_damage(damage_to_attacker)
-            if damage_to_attacker > 0:
+            if damage_to_attacker > 0 and attacker.rect: # VÉRIFICATION AJOUTÉE ICI (C'est là que ça plantait)
                 self.spawn_floating_text(attacker.rect.centerx, attacker.rect.centery, f"-{damage_to_attacker}", colors.VERMILLION)
             
             if Keyword.STEALTH in attacker.keywords: attacker.keywords.remove(Keyword.STEALTH)
 
         elif isinstance(target, Player):
             target.health -= damage_to_target
-            # Position du texte pour le héros
-            tx = self.opponent_face_rect.centerx if target == self.opponent else self.player_face_rect.centerx
-            ty = self.opponent_face_rect.centery if target == self.opponent else self.player_face_rect.centery
+            # Position du texte pour le héros (Toujours défini car initialisé dans on_resize)
+            if target == self.opponent and self.opponent_face_rect:
+                tx, ty = self.opponent_face_rect.centerx, self.opponent_face_rect.centery
+            elif target == self.player and self.player_face_rect:
+                tx, ty = self.player_face_rect.centerx, self.player_face_rect.centery
+            else:
+                tx, ty = self.width//2, self.height//2 # Fallback
+                
             self.spawn_floating_text(tx, ty, f"-{damage_to_target}", colors.VERMILLION)
             
             if Keyword.STEALTH in attacker.keywords: attacker.keywords.remove(Keyword.STEALTH)
@@ -296,8 +303,9 @@ class GameScene(GameState):
                     self.opponent.play_unit(i)
                 elif isinstance(card, SpellCard) and card.effect_type == "damage_target":
                     self.opponent.play_ritual(i, self.player)
-                    cx, cy = self.player_face_rect.centerx, self.player_face_rect.centery
-                    self.spawn_floating_text(cx, cy, f"-{card.effect_value}", colors.VERMILLION)
+                    if self.player_face_rect: # VÉRIFICATION AJOUTÉE
+                        cx, cy = self.player_face_rect.centerx, self.player_face_rect.centery
+                        self.spawn_floating_text(cx, cy, f"-{card.effect_value}", colors.VERMILLION)
                 
             taunt_targets = [u for u in self.player.board if Keyword.TAUNT in u.keywords]
             other_targets = [u for u in self.player.board if Keyword.TAUNT not in u.keywords and Keyword.STEALTH not in u.keywords]
@@ -309,8 +317,10 @@ class GameScene(GameState):
                     elif other_targets:
                         target = self.player if random.random() < 0.5 else random.choice(other_targets)
                     else: target = self.player 
+                    
                     if target:
                         self.resolve_combat(unit, target)
+                        # Refresh
                         taunt_targets = [u for u in self.player.board if Keyword.TAUNT in u.keywords]
                         other_targets = [u for u in self.player.board if Keyword.TAUNT not in u.keywords and Keyword.STEALTH not in u.keywords]
 

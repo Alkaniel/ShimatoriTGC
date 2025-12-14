@@ -17,6 +17,8 @@ class Game:
 
         self.card_manager = CardManager()
 
+        pygame.display.set_icon(pygame.image.load(os.path.join(os.path.dirname(__file__), '..', 'assets','images','raw.png')))
+
         # 2. Déterminer la résolution et les flags selon la config
         if self.config["fullscreen"]:
             # Mode "Plein écran fenêtré" (Borderless)

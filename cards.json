@@ -260,6 +260,101 @@
       "effect_type": "damage_target",
       "effect_value": 4,
       "edition": "Invasion"
+    },
+   {
+      "id": "hoshi_001",
+      "nom": "Shinsei Hoshikawa",
+      "description": "L'Héritier Sacré. Porte le poids du clan et la protection des étoiles.",
+      "classe": "Hoshikawa",
+      "cout": 6,
+      "puissance": 5,
+      "vitalite": 7,
+      "competences": ["Bouclier Divin", "Provocation"],
+      "rarete": 5,
+      "image": "shinsei.png"
+    },
+    {
+      "id": "hoshi_002",
+      "nom": "Yukihime Hoshikawa",
+      "description": "L'Hoshikage. Son autorité est absolue, son regard vaut mille lames.",
+      "classe": "Hoshikawa",
+      "cout": 9,
+      "puissance": 8,
+      "vitalite": 8,
+      "competences": ["Cri de guerre"],
+      "rarete": 5,
+      "image": "yukihime.png"
+    },
+    {
+      "id": "hoshi_003",
+      "nom": "Harunobu Hoshikawa",
+      "description": "Régent inflexible et bras droit. La loi martiale incarnée.",
+      "classe": "Hoshikawa",
+      "cout": 7,
+      "puissance": 7,
+      "vitalite": 5,
+      "competences": ["Charge"],
+      "rarete": 4,
+      "image": "harunobu.png"
+    },
+    {
+      "id": "hoshi_004",
+      "nom": "Himeno Hoshikawa",
+      "description": "Apprentie médecin. Précieuse et protégée par son frère.",
+      "classe": "Hoshikawa",
+      "cout": 3,
+      "puissance": 1,
+      "vitalite": 4,
+      "competences": ["Soins", "Furtivité"],
+      "rarete": 3,
+      "image": "himeno.png"
+    },
+    {
+      "id": "hoshi_005",
+      "nom": "Reika Hoshikawa",
+      "description": "Gardienne des rites. Elle veille à la spiritualité du clan.",
+      "classe": "Hoshikawa",
+      "cout": 4,
+      "puissance": 2,
+      "vitalite": 6,
+      "competences": ["Soins"],
+      "rarete": 3,
+      "image": "reika.png"
+    },
+    {
+      "id": "hoshi_006",
+      "nom": "Akai Hoshikawa",
+      "description": "Le Mentor souriant. Forme la relève avec patience.",
+      "classe": "Hoshikawa",
+      "cout": 4,
+      "puissance": 4,
+      "vitalite": 5,
+      "competences": ["Provocation"],
+      "rarete": 3,
+      "image": "akai.png"
+    },
+    {
+      "id": "hoshi_007",
+      "nom": "Hiroshi Hoshikawa",
+      "description": "Vétéran de guerre et stratège militaire.",
+      "classe": "Hoshikawa",
+      "cout": 5,
+      "puissance": 6,
+      "vitalite": 4,
+      "competences": ["Râle d'agonie"],
+      "rarete": 3,
+      "image": "hiroshi.png"
+    },
+    {
+      "id": "hoshi_spell_01",
+      "nom": "Veillée des Étoiles",
+      "description": "Rituel Hoshikawa. Confère la protection des astres.",
+      "classe": "Hoshikawa",
+      "cout": 2,
+      "effect_type": "buff_target",
+      "effect_value": 2,
+      "rarete": 2,
+      "image": "star_ritual.png"
     }
   ]
 }
