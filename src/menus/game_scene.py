@@ -1,29 +1,44 @@
 import pygame
-import random # Nécessaire pour le choix de cible de l'IA
+import random
 import constants.colors as colors
 from utils.game_state import GameState
 from models.player import Player
 from models.card_types import UnitCard
+from constants.enums import Keyword
 
 class GameScene(GameState):
     def __init__(self, game_manager):
         super().__init__(game_manager)
         
-        # On charge les polices une seule fois ici
         try:
+            # Polices standard
             self.font_mini_name = pygame.font.SysFont('cinzel, trajan, georgia', 12, bold=True)
             self.font_mini_stat = pygame.font.SysFont('arial, sans-serif', 16, bold=True)
             self.font_hero_hp = pygame.font.SysFont('arial, sans-serif', 30, bold=True)
             self.font_button = pygame.font.SysFont('cinzel, trajan, georgia', 20, bold=True)
             self.font_game_over = pygame.font.SysFont('cinzel, trajan, georgia', 80, bold=True)
+            
+            # Polices pour le Zoom
+            self.font_zoom_name = pygame.font.SysFont('cinzel, trajan, georgia', 20, bold=True)
+            self.font_zoom_desc = pygame.font.SysFont('arial, sans-serif', 15, bold=False)
+            self.font_zoom_stat = pygame.font.SysFont('arial, sans-serif', 22, bold=True)
+            self.font_zoom_kw = pygame.font.SysFont('arial, sans-serif', 15, bold=True)
+            
+            # Police pour le nombre de cartes dans le deck
+            self.font_deck = pygame.font.SysFont('arial, sans-serif', 24, bold=True)
         except:
+            # Fallback
             self.font_mini_name = pygame.font.Font(None, 14)
             self.font_mini_stat = pygame.font.Font(None, 18)
             self.font_hero_hp = pygame.font.Font(None, 40)
             self.font_button = pygame.font.Font(None, 24)
             self.font_game_over = pygame.font.Font(None, 100)
+            self.font_zoom_name = pygame.font.Font(None, 24)
+            self.font_zoom_desc = pygame.font.Font(None, 18)
+            self.font_zoom_stat = pygame.font.Font(None, 26)
+            self.font_zoom_kw = pygame.font.Font(None, 18)
+            self.font_deck = pygame.font.Font(None, 30)
             
-        # Variables d'affichage
         self.hand_y = 0
         self.board_y = 0
         self.opp_hand_y = 0
@@ -32,40 +47,28 @@ class GameScene(GameState):
         self.card_visual_height = 160
         self.end_turn_btn = pygame.Rect(0, 0, 140, 50)
         
-        # --- LANCEMENT DE LA PARTIE ---
         self.reset_game()
-        
-        # Premier calcul de taille
         self.on_resize(self.width, self.height)
 
     def reset_game(self):
-        """Réinitialise totalement la partie"""
         all_cards = self.game.card_manager.get_all_cards()
-        
         self.player = Player("Joueur", all_cards, is_ai=False)
         self.opponent = Player("Adversaire", all_cards, is_ai=True)
-        
         self.player.draw_card(3)
         self.opponent.draw_card(3)
-        
         self.player.max_mana = 1
         self.player.mana = 1
         self.is_player_turn = True
-        
         self.game_over = False
         self.winner_message = ""
         self.win_color = colors.SUMI_BLACK
-        
         self.player_face_rect = None
         self.opponent_face_rect = None
-        
         self.dragging_card = None
         self.dragging_index = -1
         self.drag_offset_x = 0
         self.drag_offset_y = 0
-        
         self.attacking_unit = None
-        print("Nouvelle partie démarrée !")
 
     def on_resize(self, width, height):
         super().on_resize(width, height)
@@ -78,19 +81,16 @@ class GameScene(GameState):
 
     def handle_events(self, events):
         mouse_pos = pygame.mouse.get_pos()
-        
         for event in events:
-            # GESTION FIN DE PARTIE : Clic pour reset et revenir au menu
             if self.game_over:
                 if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
-                    self.reset_game() # <--- ON RESET ICI
+                    self.reset_game()
                     self.game.change_state("menu")
                 continue
 
-            # --- JEU NORMAL ---
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.reset_game() # On reset aussi si on quitte en cours
+                    self.reset_game()
                     self.game.change_state("menu")
                 if event.key == pygame.K_SPACE:
                     self.next_turn()
@@ -102,7 +102,6 @@ class GameScene(GameState):
                         return
 
                     if self.is_player_turn:
-                        # Drag Main
                         for i in range(len(self.player.hand) - 1, -1, -1):
                             card = self.player.hand[i]
                             if card.rect and card.rect.collidepoint(mouse_pos):
@@ -112,7 +111,6 @@ class GameScene(GameState):
                                 self.drag_offset_y = mouse_pos[1] - card.rect.y
                                 return 
 
-                        # Attaque Plateau
                         for unit in self.player.board:
                             if unit.rect and unit.rect.collidepoint(mouse_pos):
                                 if unit.can_attack:
@@ -126,60 +124,91 @@ class GameScene(GameState):
                             self.player.play_unit(self.dragging_index)
                         self.dragging_card = None
                         self.dragging_index = -1
-                    
                     elif self.attacking_unit:
                         self.handle_attack_release(mouse_pos)
                         self.attacking_unit = None
 
     def handle_attack_release(self, mouse_pos):
-        target_found = False
+        target = None
         for enemy in self.opponent.board:
             if enemy.rect and enemy.rect.collidepoint(mouse_pos):
-                self.resolve_combat(self.attacking_unit, enemy)
-                target_found = True
+                target = enemy
                 break
         
-        if not target_found and self.opponent_face_rect and self.opponent_face_rect.collidepoint(mouse_pos):
-            self.resolve_combat(self.attacking_unit, self.opponent)
-            target_found = True
+        if not target and self.opponent_face_rect and self.opponent_face_rect.collidepoint(mouse_pos):
+            target = self.opponent
+
+        if not target: return
+
+        # Gestion STEALTH
+        if isinstance(target, UnitCard) and Keyword.STEALTH in target.keywords:
+            print("Impossible d'attaquer une unité furtive !")
+            return
+
+        # Gestion TAUNT
+        taunt_units = [u for u in self.opponent.board if Keyword.TAUNT in u.keywords and not u.is_dead and Keyword.STEALTH not in u.keywords]
+        
+        if taunt_units:
+            if target in taunt_units:
+                self.resolve_combat(self.attacking_unit, target)
+            else:
+                print("ACTION BLOQUÉE : Vous devez attaquer l'unité avec Provocation !")
+        else:
+            self.resolve_combat(self.attacking_unit, target)
 
     def resolve_combat(self, attacker, target):
+        damage_to_target = attacker.current_attack
+        damage_to_attacker = 0
+        
         if isinstance(target, UnitCard):
-            d_target = attacker.current_attack
-            d_attacker = target.current_attack
-            target.take_damage(d_target)
-            attacker.take_damage(d_attacker)
+            damage_to_attacker = target.current_attack
             
+            # Toxique
+            if Keyword.POISONOUS in attacker.keywords: damage_to_target = 999 
+            if Keyword.POISONOUS in target.keywords: damage_to_attacker = 999
+
+            # Bouclier Divin Target
+            if Keyword.DIVINE_SHIELD in target.keywords:
+                damage_to_target = 0
+                target.keywords.remove(Keyword.DIVINE_SHIELD)
+                print(f"Bouclier Divin de {target.name} brisé !")
+            
+            target.take_damage(damage_to_target)
+            
+            # Bouclier Divin Attacker
+            if Keyword.DIVINE_SHIELD in attacker.keywords:
+                damage_to_attacker = 0
+                attacker.keywords.remove(Keyword.DIVINE_SHIELD)
+                print(f"Bouclier Divin de {attacker.name} brisé !")
+                
+            attacker.take_damage(damage_to_attacker)
+            
+            if Keyword.STEALTH in attacker.keywords:
+                attacker.keywords.remove(Keyword.STEALTH)
+
         elif isinstance(target, Player):
-            target.health -= attacker.current_attack
-            print(f"{target.name} prend {attacker.current_attack} dégâts (PV: {target.health})")
+            target.health -= damage_to_target
+            print(f"{target.name} prend {damage_to_target} dégâts")
+            if Keyword.STEALTH in attacker.keywords:
+                attacker.keywords.remove(Keyword.STEALTH)
             
         attacker.can_attack = False
-        
         self.clean_dead_units(self.player)
         self.clean_dead_units(self.opponent)
         
-        if self.opponent.health <= 0:
-            self.trigger_game_over(victory=True)
-        elif self.player.health <= 0:
-            self.trigger_game_over(victory=False)
+        if self.opponent.health <= 0: self.trigger_game_over(True)
+        elif self.player.health <= 0: self.trigger_game_over(False)
 
     def trigger_game_over(self, victory):
         self.game_over = True
-        if victory:
-            self.winner_message = "VICTOIRE !"
-            self.win_color = colors.BAMBOO_GREEN
-        else:
-            self.winner_message = "DÉFAITE..."
-            self.win_color = colors.VERMILLION
+        self.winner_message = "VICTOIRE !" if victory else "DÉFAITE..."
+        self.win_color = colors.BAMBOO_GREEN if victory else colors.VERMILLION
 
     def clean_dead_units(self, player):
         alive = []
         for unit in player.board:
-            if not unit.is_dead:
-                alive.append(unit)
-            else:
-                player.graveyard.append(unit)
+            if not unit.is_dead: alive.append(unit)
+            else: player.graveyard.append(unit)
         player.board = alive
 
     def next_turn(self):
@@ -187,37 +216,43 @@ class GameScene(GameState):
             self.is_player_turn = False
             self.opponent.start_turn()
             
-            # --- IA : Jouer des cartes ---
             for i in range(len(self.opponent.hand) - 1, -1, -1):
                 self.opponent.play_unit(i)
+                
+            taunt_targets = [u for u in self.player.board if Keyword.TAUNT in u.keywords]
+            other_targets = [u for u in self.player.board if Keyword.TAUNT not in u.keywords and Keyword.STEALTH not in u.keywords]
             
-            # --- IA : Attaquer INTELLIGEMMENT ---
             for unit in self.opponent.board:
                 if unit.can_attack and not self.game_over:
-                    # LOGIQUE IA :
-                    # 1. Si le joueur a des unités, on en attaque une au hasard (Contrôle de plateau)
-                    if len(self.player.board) > 0:
-                        target = random.choice(self.player.board)
-                        print(f"IA attaque l'unité {target.name}")
+                    target = None
+                    if taunt_targets: target = random.choice(taunt_targets)
+                    elif other_targets:
+                        target = self.player if random.random() < 0.5 else random.choice(other_targets)
+                    else: target = self.player
+                        
+                    if target:
                         self.resolve_combat(unit, target)
-                    # 2. Sinon, on attaque le joueur (Face)
-                    else:
-                        print("IA attaque le Joueur")
-                        self.resolve_combat(unit, self.player)
-            
+                        taunt_targets = [u for u in self.player.board if Keyword.TAUNT in u.keywords]
+                        other_targets = [u for u in self.player.board if Keyword.TAUNT not in u.keywords and Keyword.STEALTH not in u.keywords]
+
             if not self.game_over:
                 self.is_player_turn = True
                 self.player.start_turn()
 
-    def update(self):
-        pass
+    def update(self): pass
 
     def draw(self):
         self.screen.fill(colors.WASHI_COLOR)
-        self.draw_tatami_pattern()
+        
+        # --- L'ERREUR ÉTAIT ICI ---
+        self.draw_tatami_pattern() 
+        
         pygame.draw.line(self.screen, colors.SUMI_GRAY, (0, self.height//2), (self.width, self.height//2), 2)
         
-        # Jeu Normal
+        # --- PIOCHES ---
+        self.draw_deck_pile(self.opponent, 50, self.height//2 - 140)
+        self.draw_deck_pile(self.player, self.width - 110, self.height//2 + 50)
+        
         self.draw_hand(self.opponent, self.opp_hand_y, hidden=True)
         self.draw_board(self.opponent, self.opp_board_y)
         self.draw_hero_stats(self.opponent, 60, 60, is_opponent=True)
@@ -231,52 +266,15 @@ class GameScene(GameState):
         if self.dragging_card:
             mx, my = pygame.mouse.get_pos()
             self.draw_card_front(self.dragging_card, mx - self.drag_offset_x, my - self.drag_offset_y)
-        
         if self.attacking_unit:
             self.draw_attack_arrow()
-            
         if self.game_over:
             self.draw_game_over_screen()
+        
+        if not self.dragging_card and not self.game_over:
+            self.check_hover_and_draw_zoom()
 
-    def draw_game_over_screen(self):
-        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        self.screen.blit(overlay, (0, 0))
-        
-        text = self.font_game_over.render(self.winner_message, True, self.win_color)
-        rect = text.get_rect(center=(self.width//2, self.height//2 - 50))
-        
-        shadow = self.font_game_over.render(self.winner_message, True, (0,0,0))
-        self.screen.blit(shadow, (rect.x + 4, rect.y + 4))
-        self.screen.blit(text, rect)
-        
-        sub = self.fonts['subtitle'].render("Cliquez pour retourner au menu", True, colors.WASHI_COLOR)
-        self.screen.blit(sub, sub.get_rect(center=(self.width//2, self.height//2 + 50)))
-
-    def draw_attack_arrow(self):
-        if not self.attacking_unit or not self.attacking_unit.rect: return
-        start = self.attacking_unit.rect.center
-        end = pygame.mouse.get_pos()
-        pygame.draw.line(self.screen, colors.VERMILLION, start, end, 5)
-        pygame.draw.circle(self.screen, colors.VERMILLION, end, 10)
-
-    def draw_end_turn_button(self):
-        if self.is_player_turn:
-            bg_color = colors.VERMILLION
-            text_color = colors.WASHI_COLOR
-            text = "Fin de Tour"
-        else:
-            bg_color = colors.SUMI_GRAY
-            text_color = (200, 200, 200)
-            text = "Tour Adverse"
-            
-        r = self.end_turn_btn
-        pygame.draw.rect(self.screen, (50, 50, 50, 100), (r.x+4, r.y+4, r.w, r.h))
-        pygame.draw.rect(self.screen, bg_color, r)
-        pygame.draw.rect(self.screen, colors.SUMI_BLACK, r, 2)
-        
-        t = self.font_button.render(text, True, text_color)
-        self.screen.blit(t, t.get_rect(center=r.center))
+    # --- MÉTHODES DE DESSIN (Doivent toutes être dans la classe) ---
 
     def draw_tatami_pattern(self):
         color = (230, 225, 210)
@@ -286,45 +284,181 @@ class GameScene(GameState):
         for y in range(0, self.height, line_spacing):
             pygame.draw.line(self.screen, color, (0, y), (self.width, y), 1)
 
+    # --- C'EST LA MÉTHODE QUI MANQUAIT ---
     def draw_stat_bubble(self, x, y, value, color):
-        radius = 16
-        pygame.draw.circle(self.screen, color, (x, y), radius)
-        pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x, y), radius, 2)
+        pygame.draw.circle(self.screen, color, (x, y), 16)
+        pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x, y), 16, 2)
         val_surf = self.font_mini_stat.render(str(value), True, colors.WASHI_COLOR)
-        val_rect = val_surf.get_rect(center=(x, y)) 
+        val_rect = val_surf.get_rect(center=(x, y))
         val_rect.y += 1 
         self.screen.blit(val_surf, val_rect)
+
+    def draw_deck_pile(self, player, x, y):
+        deck_count = len(player.deck)
+        if deck_count == 0:
+            rect = pygame.Rect(x, y, 60, 80)
+            pygame.draw.rect(self.screen, (0,0,0,50), rect, 1)
+            return
+
+        offset = min(deck_count, 3) * 2
+        for i in range(min(deck_count, 3)):
+            r = pygame.Rect(x - i*2, y - i*2, 60, 80)
+            pygame.draw.rect(self.screen, colors.INDIGO, r)
+            pygame.draw.rect(self.screen, colors.WASHI_COLOR, r, 1)
+        
+        top_rect = pygame.Rect(x - offset, y - offset, 60, 80)
+        pygame.draw.rect(self.screen, colors.INDIGO, top_rect)
+        pygame.draw.rect(self.screen, colors.GOLD_LEAF, top_rect, 2)
+        pygame.draw.circle(self.screen, colors.GOLD_LEAF, top_rect.center, 15, 1)
+        
+        txt_surf = self.font_deck.render(str(deck_count), True, colors.WASHI_COLOR)
+        txt_bg = txt_surf.get_rect(center=top_rect.center)
+        pygame.draw.rect(self.screen, colors.INDIGO, txt_bg.inflate(10, 5))
+        self.screen.blit(txt_surf, txt_bg)
+
+    def draw_keyword_icons(self, card, x, y):
+        if not isinstance(card, UnitCard): return
+        icon_y = y + 85
+        start_x = x + 10
+        spacing = 20
+        
+        if Keyword.CHARGE in card.keywords:
+            cx, cy = start_x, icon_y
+            pygame.draw.circle(self.screen, colors.GOLD_LEAF, (cx, cy), 8)
+            pygame.draw.circle(self.screen, colors.SUMI_BLACK, (cx, cy), 8, 1)
+            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx-3, cy-3), (cx+3, cy-3), 2)
+            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx+3, cy-3), (cx-3, cy+3), 2)
+            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx-3, cy+3), (cx+3, cy+3), 2)
+            start_x += spacing
+
+        if Keyword.STEALTH in card.keywords:
+            cx, cy = start_x, icon_y
+            pygame.draw.circle(self.screen, colors.SUMI_GRAY, (cx, cy), 8)
+            pygame.draw.circle(self.screen, colors.SUMI_BLACK, (cx, cy), 8, 1)
+            pygame.draw.line(self.screen, colors.WASHI_COLOR, (cx-4, cy), (cx+4, cy), 2)
+            start_x += spacing
+
+        if Keyword.POISONOUS in card.keywords:
+            cx, cy = start_x, icon_y
+            pygame.draw.circle(self.screen, (50, 200, 50), (cx, cy), 8)
+            pygame.draw.circle(self.screen, colors.SUMI_BLACK, (cx, cy), 8, 1)
+            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx-3, cy-3), (cx+3, cy+3), 2)
+            pygame.draw.line(self.screen, colors.SUMI_BLACK, (cx+3, cy-3), (cx-3, cy+3), 2)
+            start_x += spacing
+
+    def check_hover_and_draw_zoom(self, *args):
+        mouse_pos = pygame.mouse.get_pos()
+        hovered_card = None
+        all_zones = self.player.hand + self.player.board + self.opponent.board
+        for card in all_zones:
+            if card.rect and card.rect.collidepoint(mouse_pos):
+                hovered_card = card; break
+        if hovered_card: self.draw_zoomed_card(hovered_card, mouse_pos)
+
+    def draw_zoomed_card(self, card, mouse_pos):
+        zoom_w, zoom_h = 240, 340
+        x, y = mouse_pos[0] + 20, mouse_pos[1] - 50
+        if x + zoom_w > self.width: x = mouse_pos[0] - zoom_w - 20
+        if y + zoom_h > self.height: y = self.height - zoom_h - 10
+        if y < 10: y = 10
+        rect = pygame.Rect(x, y, zoom_w, zoom_h)
+        shadow_rect = rect.copy(); shadow_rect.x += 8; shadow_rect.y += 8
+        pygame.draw.rect(self.screen, (0,0,0,90), shadow_rect, border_radius=12)
+        pygame.draw.rect(self.screen, colors.WASHI_COLOR, rect, border_radius=12)
+        pygame.draw.rect(self.screen, colors.INDIGO, rect, 3, border_radius=12)
+        pygame.draw.rect(self.screen, colors.GOLD_LEAF, rect.inflate(-8, -8), 1, border_radius=12)
+        mana_radius = 22; mana_cx, mana_cy = x + 30, y + 30
+        pygame.draw.circle(self.screen, colors.INDIGO, (mana_cx, mana_cy), mana_radius)
+        pygame.draw.circle(self.screen, colors.GOLD_LEAF, (mana_cx, mana_cy), mana_radius, 2)
+        cost_surf = self.font_zoom_stat.render(str(card.mana_cost), True, colors.WASHI_COLOR)
+        self.screen.blit(cost_surf, cost_surf.get_rect(center=(mana_cx, mana_cy)))
+        text_start_x = x + 60; available_text_width = (x + zoom_w - 15) - text_start_x
+        name_surf = self.font_zoom_name.render(card.name, True, colors.SUMI_BLACK)
+        if name_surf.get_width() > available_text_width:
+             ratio = available_text_width / name_surf.get_width()
+             new_h = int(name_surf.get_height() * ratio)
+             name_surf = pygame.transform.smoothscale(name_surf, (int(available_text_width), new_h))
+        name_rect = name_surf.get_rect(midleft=(text_start_x, mana_cy))
+        self.screen.blit(name_surf, name_rect)
+        img_h = 140; img_rect = pygame.Rect(x + 15, y + 65, zoom_w - 30, img_h)
+        bg_col = (*colors.INDIGO, 60)
+        pygame.draw.rect(self.screen, bg_col, img_rect)
+        pygame.draw.rect(self.screen, colors.SUMI_GRAY, img_rect, 1)
+        desc_y = y + 65 + img_h + 15
+        current_y = desc_y
+        if isinstance(card, UnitCard) and card.keywords:
+            kw_txt = ", ".join([k.value for k in card.keywords])
+            kw_surf = self.font_zoom_kw.render(kw_txt, True, colors.VERMILLION)
+            self.screen.blit(kw_surf, (x + 20, current_y)); current_y += 25
+        words = card.description.split(' '); lines = []; curr_line = []
+        for word in words:
+            curr_line.append(word)
+            if self.font_zoom_desc.size(' '.join(curr_line))[0] > zoom_w - 40:
+                curr_line.pop(); lines.append(' '.join(curr_line)); curr_line = [word]
+        lines.append(' '.join(curr_line))
+        for line in lines:
+            line_surf = self.font_zoom_desc.render(line, True, colors.SUMI_GRAY)
+            self.screen.blit(line_surf, (x + 20, current_y)); current_y += 18
+        if isinstance(card, UnitCard):
+            stat_y = y + zoom_h - 35
+            pygame.draw.circle(self.screen, colors.VERMILLION, (x + 35, stat_y), 20)
+            pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x + 35, stat_y), 20, 2)
+            atk_s = self.font_zoom_stat.render(str(card.current_attack), True, colors.WASHI_COLOR)
+            self.screen.blit(atk_s, atk_s.get_rect(center=(x + 35, stat_y)))
+            pygame.draw.circle(self.screen, colors.BAMBOO_GREEN, (x + zoom_w - 35, stat_y), 20)
+            pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x + zoom_w - 35, stat_y), 20, 2)
+            hp_s = self.font_zoom_stat.render(str(card.current_health), True, colors.WASHI_COLOR)
+            self.screen.blit(hp_s, hp_s.get_rect(center=(x + zoom_w - 35, stat_y)))
 
     def draw_card_front(self, card, x, y, can_attack=False):
         rect = pygame.Rect(x, y, self.card_visual_width, self.card_visual_height)
         card.rect = rect
         
+        has_taunt = False
+        is_stealth = False
+        
+        if isinstance(card, UnitCard):
+            if Keyword.TAUNT in card.keywords: has_taunt = True
+            if Keyword.STEALTH in card.keywords: is_stealth = True
+
+        if has_taunt:
+            shield_rect = rect.inflate(6, 6)
+            pygame.draw.rect(self.screen, (100, 100, 100), shield_rect, border_radius=5)
+            pygame.draw.rect(self.screen, colors.SUMI_BLACK, shield_rect, 2, border_radius=5)
+        
+        if isinstance(card, UnitCard) and Keyword.DIVINE_SHIELD in card.keywords:
+            ds_rect = rect.inflate(10, 10)
+            pygame.draw.rect(self.screen, (255, 215, 0), ds_rect, 3, border_radius=6)
+
         if can_attack:
              glow_rect = rect.inflate(8, 8)
              pygame.draw.rect(self.screen, colors.BAMBOO_GREEN, glow_rect, 3, border_radius=4)
         
-        pygame.draw.rect(self.screen, colors.WASHI_COLOR, rect)
+        bg_color = (200, 200, 200) if is_stealth else colors.WASHI_COLOR
+        pygame.draw.rect(self.screen, bg_color, rect)
         pygame.draw.rect(self.screen, colors.INDIGO, rect, 2)
         inner_rect = rect.inflate(-6, -6)
         pygame.draw.rect(self.screen, colors.GOLD_LEAF, inner_rect, 1)
 
-        mana_radius = 12
         mana_x, mana_y = x + 18, y + 20
-        pygame.draw.circle(self.screen, colors.INDIGO, (mana_x, mana_y), mana_radius)
-        pygame.draw.circle(self.screen, colors.GOLD_LEAF, (mana_x, mana_y), mana_radius, 1)
+        pygame.draw.circle(self.screen, colors.INDIGO, (mana_x, mana_y), 12)
+        pygame.draw.circle(self.screen, colors.GOLD_LEAF, (mana_x, mana_y), 12, 1)
         mana = self.font_mini_stat.render(str(card.mana_cost), True, colors.WASHI_COLOR)
         self.screen.blit(mana, mana.get_rect(center=(mana_x, mana_y + 1)))
 
-        text_start = x + 35
-        text_w = (x + self.card_visual_width - 5) - text_start
+        text_start = x + 35; text_w = (x + self.card_visual_width - 5) - text_start
         name = self.font_mini_name.render(card.name, True, colors.SUMI_BLACK)
         if name.get_width() > text_w:
             name = pygame.transform.smoothscale(name, (int(text_w), int(name.get_height() * text_w/name.get_width())))
         self.screen.blit(name, name.get_rect(center=(text_start + text_w//2, mana_y)))
 
         img_rect = pygame.Rect(x+10, y+40, self.card_visual_width-20, 80)
-        pygame.draw.rect(self.screen, (*colors.INDIGO, 50), img_rect)
+        bg_col = (*colors.INDIGO, 80) if has_taunt else (*colors.INDIGO, 50)
+        if is_stealth: bg_col = (50, 50, 50, 100)
+        pygame.draw.rect(self.screen, bg_col, img_rect)
         pygame.draw.rect(self.screen, colors.SUMI_GRAY, img_rect, 1)
+        
+        self.draw_keyword_icons(card, x, y)
 
         if isinstance(card, UnitCard):
             stat_y = y + self.card_visual_height - 20
@@ -334,12 +468,10 @@ class GameScene(GameState):
     def draw_hand(self, player, y_pos, hidden=False, skip_index=-1):
         num_cards = len(player.hand)
         if num_cards == 0: return
-        spacing = 10
-        total_width = num_cards * (self.card_visual_width + spacing)
-        start_x = (self.width - total_width) // 2
+        start_x = (self.width - (num_cards * (self.card_visual_width + 10))) // 2
         for i, card in enumerate(player.hand):
             if i == skip_index: continue
-            x = start_x + i * (self.card_visual_width + spacing)
+            x = start_x + i * (self.card_visual_width + 10)
             rect = pygame.Rect(x, y_pos, self.card_visual_width, self.card_visual_height)
             card.rect = rect 
             if hidden:
@@ -353,41 +485,62 @@ class GameScene(GameState):
     def draw_board(self, player, y_pos):
         num_units = len(player.board)
         if num_units == 0: return
-        spacing = 10
-        total_width = num_units * (self.card_visual_width + spacing)
-        start_x = (self.width - total_width) // 2
+        start_x = (self.width - (num_units * (self.card_visual_width + 10))) // 2
         for i, unit in enumerate(player.board):
-            x = start_x + i * (self.card_visual_width + spacing)
+            x = start_x + i * (self.card_visual_width + 10)
             can_act = unit.can_attack and self.is_player_turn and player == self.player and not self.game_over
             self.draw_card_front(unit, x, y_pos, can_attack=can_act)
 
     def draw_hero_stats(self, player, x, y, is_opponent=False):
-        radius = 35
-        color = colors.VERMILLION if not player.is_ai else colors.INDIGO
-        rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
+        radius = 35; color = colors.VERMILLION if not player.is_ai else colors.INDIGO
+        rect = pygame.Rect(x-radius, y-radius, radius*2, radius*2)
         if is_opponent: self.opponent_face_rect = rect
         else: self.player_face_rect = rect
-        
         pygame.draw.circle(self.screen, color, (x, y), radius)
         pygame.draw.circle(self.screen, colors.SUMI_BLACK, (x, y), radius, 3)
-        
         hp_surf = self.font_hero_hp.render(str(player.health), True, colors.WASHI_COLOR)
         if player.health > 99: hp_surf = pygame.transform.scale(hp_surf, (40, 30))
         self.screen.blit(hp_surf, hp_surf.get_rect(center=(x, y)))
-        
         name_surf = self.fonts['subtitle'].render(player.name, True, colors.SUMI_BLACK)
         self.screen.blit(name_surf, (x + radius + 15, y - 15))
 
     def draw_mana_bar(self, player, x, y):
-        crystal_size = 18
-        spacing = 5
         txt = f"Mana: {player.mana}/{player.max_mana}"
         surf = self.fonts['small'].render(txt, True, colors.INDIGO)
         self.screen.blit(surf, (x, y - 40))
         for i in range(10): 
-            cx = x + i * (crystal_size + spacing)
-            pygame.draw.circle(self.screen, colors.SUMI_GRAY, (cx, y), crystal_size//2, 1)
-            if i < player.mana:
-                pygame.draw.circle(self.screen, colors.INDIGO, (cx, y), crystal_size//2 - 2)
-            elif i < player.max_mana:
-                pygame.draw.circle(self.screen, (150, 150, 200), (cx, y), crystal_size//2 - 4)
+            cx = x + i * 23
+            pygame.draw.circle(self.screen, colors.SUMI_GRAY, (cx, y), 9, 1)
+            if i < player.mana: pygame.draw.circle(self.screen, colors.INDIGO, (cx, y), 7)
+            elif i < player.max_mana: pygame.draw.circle(self.screen, (150, 150, 200), (cx, y), 5)
+    
+    def draw_game_over_screen(self):
+        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
+        text = self.font_game_over.render(self.winner_message, True, self.win_color)
+        rect = text.get_rect(center=(self.width//2, self.height//2 - 50))
+        shadow = self.font_game_over.render(self.winner_message, True, (0,0,0))
+        self.screen.blit(shadow, (rect.x+4, rect.y+4))
+        self.screen.blit(text, rect)
+        sub = self.fonts['subtitle'].render("Cliquez pour retourner au menu", True, colors.WASHI_COLOR)
+        self.screen.blit(sub, sub.get_rect(center=(self.width//2, self.height//2 + 50)))
+
+    def draw_attack_arrow(self):
+        if not self.attacking_unit or not self.attacking_unit.rect: return
+        start = self.attacking_unit.rect.center
+        end = pygame.mouse.get_pos()
+        pygame.draw.line(self.screen, colors.VERMILLION, start, end, 5)
+        pygame.draw.circle(self.screen, colors.VERMILLION, end, 10)
+
+    def draw_end_turn_button(self):
+        if self.is_player_turn:
+            bg_color = colors.VERMILLION; text_color = colors.WASHI_COLOR; text = "Fin de Tour"
+        else:
+            bg_color = colors.SUMI_GRAY; text_color = (200, 200, 200); text = "Tour Adverse"
+        r = self.end_turn_btn
+        pygame.draw.rect(self.screen, (50, 50, 50, 100), (r.x+4, r.y+4, r.w, r.h))
+        pygame.draw.rect(self.screen, bg_color, r)
+        pygame.draw.rect(self.screen, colors.SUMI_BLACK, r, 2)
+        t = self.font_button.render(text, True, text_color)
+        self.screen.blit(t, t.get_rect(center=r.center))
